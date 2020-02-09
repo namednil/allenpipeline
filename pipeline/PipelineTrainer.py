@@ -28,6 +28,12 @@ from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer_base import TrainerBase
 from allennlp.training import util as training_util
 from allennlp.training.moving_average import MovingAverage
+from comet_ml import Experiment
+
+from pipeline.DatasetWriter import  DatasetWriter
+from pipeline.Decoder import BatchDecoder, split_up
+from pipeline.OrderedDatasetReader import OrderedDatasetReader
+from pipeline.evaluation_commands import BaseEvaluationCommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -40,6 +46,9 @@ class PipelineTrainer(TrainerBase):
                  iterator: DataIterator,
                  train_dataset: Iterable[Instance],
                  validation_dataset: Optional[Iterable[Instance]] = None,
+                 decoder : Optional[BatchDecoder] = None,
+                 dataset_writer : Optional[DatasetWriter] = None,
+                 validation_command : Optional[BaseEvaluationCommand] = None,
                  patience: Optional[int] = None,
                  validation_metric: str = "-loss",
                  validation_iterator: DataIterator = None,
@@ -176,6 +185,9 @@ class PipelineTrainer(TrainerBase):
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
+        self.validation_command = validation_command
+        self.decoder = decoder
+        self.dataset_writer = dataset_writer
         self.model = model
 
         self.iterator = iterator
@@ -395,6 +407,55 @@ class PipelineTrainer(TrainerBase):
             metrics['gpu_'+str(gpu_num)+'_memory_MB'] = memory
         return metrics
 
+
+    def validate(self, epoch : int) -> Dict[str, float]:
+        if not self.dataset_writer:
+            print("No dataset writer")
+            return dict()
+
+        if self._validation_iterator is not None:
+            val_iterator = self._validation_iterator
+        else:
+            val_iterator = self.iterator
+
+        raw_val_generator = val_iterator(self._validation_data,
+                                         num_epochs=1,
+                                         shuffle=False)
+        val_generator = lazy_groups_of(raw_val_generator, len(self._cuda_devices))
+        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data)/len(self._cuda_devices))
+
+        val_generator_tqdm = Tqdm.tqdm(val_generator,
+                                       total=num_validation_batches)
+
+        preds = []
+        filename = self._serialization_dir+f"/pred_epoch_{epoch}.txt"
+
+        with open(filename,"w") as f:
+            for batch_group in val_generator_tqdm:
+
+                if self._multiple_gpu:
+                    output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
+                else:
+                    assert len(batch_group) == 1
+                    batch = batch_group[0]
+                    batch = nn_util.move_to_device(batch, self._cuda_devices[0])
+                    output_dict = self.model(**batch)
+
+                output_dict = self.model.decode(output_dict)
+
+                output_dict = split_up(output_dict, batch["order_metadata"])
+                preds.extend(output_dict)
+
+            if self.decoder:
+                preds = self.decoder.decode_batch(self.model.vocab, preds)
+
+            self.dataset_writer.write_to_file(self.model.vocab, OrderedDatasetReader.restore_order(preds), f)
+
+        if self.validation_command:
+            return self.validation_command.evaluate(filename)
+        return dict()
+
+
     def _validation_loss(self) -> Tuple[float, int]:
         """
         Computes the validation loss. Returns it and the number of batches.
@@ -446,7 +507,7 @@ class PipelineTrainer(TrainerBase):
 
         return val_loss, batches_this_epoch
 
-    def train(self) -> Dict[str, Any]:
+    def train(self, experiment : Optional[Experiment] = None) -> Dict[str, Any]:
         """
         Trains the supplied model with the supplied parameters.
         """
@@ -464,7 +525,7 @@ class PipelineTrainer(TrainerBase):
 
         train_metrics: Dict[str, float] = {}
         val_metrics: Dict[str, float] = {}
-        this_epoch_val_metric: float = None
+        this_epoch_val_metric: Optional[float] = None
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
@@ -476,6 +537,10 @@ class PipelineTrainer(TrainerBase):
         for epoch in range(epoch_counter, self._num_epochs):
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
+
+            if experiment:
+                with experiment.train():
+                    experiment.log_metrics(train_metrics, epoch=epoch)
 
             # get peak of memory usage
             if 'cpu_memory_MB' in train_metrics:
@@ -490,6 +555,9 @@ class PipelineTrainer(TrainerBase):
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches = self._validation_loss()
                     val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
+
+                    other_metrics = self.validate(epoch) #write predictions to file and get scores from external tool
+                    val_metrics.update(other_metrics)
 
                     # Check validation metric for early stopping
                     this_epoch_val_metric = val_metrics[self._validation_metric]
@@ -515,6 +583,10 @@ class PipelineTrainer(TrainerBase):
                 metrics["training_" + key] = value
             for key, value in val_metrics.items():
                 metrics["validation_" + key] = value
+
+            if experiment:
+                with experiment.validate():
+                    experiment.log_metrics(metrics, epoch=epoch)
 
             if self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
@@ -663,6 +735,9 @@ class PipelineTrainer(TrainerBase):
                     train_data: Iterable[Instance],
                     validation_data: Optional[Iterable[Instance]],
                     params: Params,
+                    decoder : BatchDecoder,
+                    dataset_writer : DatasetWriter,
+                    validation_command : BaseEvaluationCommand,
                     validation_iterator: DataIterator = None) -> 'PipelineTrainer':
         # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
@@ -726,6 +801,9 @@ class PipelineTrainer(TrainerBase):
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
                    train_data, validation_data,
+                   decoder = decoder,
+                   dataset_writer = dataset_writer,
+                   validation_command = validation_command,
                    patience=patience,
                    validation_metric=validation_metric,
                    validation_iterator=validation_iterator,
