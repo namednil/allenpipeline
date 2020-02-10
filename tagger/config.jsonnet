@@ -21,14 +21,15 @@ local data_iterator = {
        "sorting_keys" : [["tokens","num_tokens"]]
     };
 
+local data_writer = {
+"type" : "tagging_writer"
+};
 
 {
     "dataset_reader": dataset_reader,
     "validation_dataset_reader" : dataset_reader,
 
-    "dataset_writer" : {
-        "type" : "tagging_writer"
-    },
+    "dataset_writer" : data_writer,
 
     "validation_command" : {
         "type" : "bash_evaluation_command",
@@ -38,6 +39,21 @@ local data_iterator = {
             "Acc" : [0, "Acc (?P<value>[0-9.]+)"]
         }
     },
+
+   "test_command" : {
+        "type" : "bash_evaluation_command",
+        "command" : "python tagger/eval_script.py {gold_file} {system_output}",
+        "gold_file" : "data/dev.tt",
+        "result_regexes" : {
+            "Acc" : [0, "Acc (?P<value>[0-9.]+)"]
+        }
+    },
+
+   "annotator" : {
+        "data_iterator" : data_iterator,
+        "dataset_reader" : dataset_reader,
+        "dataset_writer" : data_writer
+   },
 
     "iterator": data_iterator,
     "model": {
@@ -59,8 +75,9 @@ local data_iterator = {
     },
     "train_data_path": "data/dev.tt",
     "validation_data_path": "data/dev.tt",
+    "test_data_path" : "data/dev.tt",
 
-    "evaluate_on_test" : false,
+    "evaluate_on_test" : true,
 
     "trainer": {
         "num_epochs": num_epochs,

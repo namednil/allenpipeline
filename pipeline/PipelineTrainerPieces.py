@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from allennlp.common import Params
 
+from pipeline.Annotate import Annotator
 from pipeline.DatasetWriter import DatasetWriter
 from pipeline.Decoder import BatchDecoder
 from pipeline.evaluation_commands import BaseEvaluationCommand
@@ -12,6 +13,8 @@ class PipelineTrainerPieces:
     dataset_writer : DatasetWriter
     decoder : BatchDecoder
     validation_command : BaseEvaluationCommand
+    test_command : BaseEvaluationCommand
+    annotator : Annotator
 
     @staticmethod
     def from_params(params : Params):
@@ -27,4 +30,12 @@ class PipelineTrainerPieces:
         if "validation_command" in params:
             validation_command = BaseEvaluationCommand.from_params(params.pop("validation_command"))
 
-        return PipelineTrainerPieces(dataset_writer, decoder, validation_command)
+        test_command = None
+        if "validation_command" in params:
+            test_command = BaseEvaluationCommand.from_params(params.pop("test_command"))
+
+        annotator = Annotator
+        if "annotator" in params:
+            annotator = Annotator.from_params(params.pop("annotator"))
+
+        return PipelineTrainerPieces(dataset_writer, decoder, validation_command, test_command, annotator)

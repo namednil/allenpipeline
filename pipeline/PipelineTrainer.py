@@ -408,7 +408,7 @@ class PipelineTrainer(TrainerBase):
         return metrics
 
 
-    def validate(self, epoch : int) -> Dict[str, float]:
+    def _validate(self, epoch : int) -> Dict[str, float]:
         if not self.dataset_writer:
             print("No dataset writer")
             return dict()
@@ -556,7 +556,7 @@ class PipelineTrainer(TrainerBase):
                     val_loss, num_batches = self._validation_loss()
                     val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
 
-                    other_metrics = self.validate(epoch) #write predictions to file and get scores from external tool
+                    other_metrics = self._validate(epoch) #write predictions to file and get scores from external tool
                     val_metrics.update(other_metrics)
 
                     # Check validation metric for early stopping

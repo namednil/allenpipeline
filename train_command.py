@@ -42,11 +42,15 @@ from typing import List, Tuple
 import random
 import socket
 
+from allennlp.data import DatasetReader
 from allennlp.training.trainer_pieces import TrainerPieces
 from comet_ml import Experiment
 
+from pipeline.Annotate import Annotator
 from pipeline.PipelineTrainer import PipelineTrainer
 from pipeline.PipelineTrainerPieces import PipelineTrainerPieces
+from pipeline.evaluation_commands import BaseEvaluationCommand
+from pipeline.utils import merge_dicts
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',level=logging.INFO) #turn on logging.
 
@@ -132,8 +136,18 @@ serialization_dir = args.serialization_dir
 create_serialization_dir(params,serialization_dir , args.recover, args.force)
 stdout_handler = prepare_global_logging(serialization_dir, args.file_friendly_logging)
 
+test_file = params.params.get("test_data_path", None)
+
+test_command = BaseEvaluationCommand.from_params(params.pop("test_command"))
+
 cuda_device = params.params.get('trainer').get('cuda_device', -1)
 check_for_gpu(cuda_device)
+
+validation_dataset_reader_params = params.pop('validation_dataset_reader', None)
+if validation_dataset_reader_params is not None:
+    dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+else:
+    dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
 
 params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
@@ -144,6 +158,8 @@ evaluate_on_test = params.pop_bool("evaluate_on_test", False)
 # Special logic to instantiate backward-compatible trainer.
 pieces = TrainerPieces.from_params(params, serialization_dir, args.recover)  # pylint: disable=no-member
 pipelinepieces = PipelineTrainerPieces.from_params(params)
+
+
 
 trainer = PipelineTrainer.from_params(
     model=pieces.model,
@@ -195,13 +211,18 @@ except KeyboardInterrupt:
     raise
 
 # Evaluate
-if evaluate_on_test:
-    logger.info("The model will be evaluated using the best epoch weights.")
-    overall_metrics = dict()
-    if experiment:
-        with experiment.test():
-            experiment.log_metrics(overall_metrics)
-    raise NotImplementedError()
+if test_file and evaluate_on_test:
+    logger.info("The model will be evaluated using the best epoch weights (see pred_test.txt).")
+    pipelinepieces.annotator.annotate_file(trainer.model, test_file, os.path.join(serialization_dir,"pred_test.txt"))
+
+    if test_command:
+        logger.info("Comparing against gold standard.")
+        test_metrics = test_command.evaluate(os.path.join(serialization_dir,"pred_test.txt"))
+        if experiment:
+            with experiment.test():
+                experiment.log_metrics(test_metrics)
+        metrics = merge_dicts(metrics, "test",test_metrics)
+
 
 dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
 
