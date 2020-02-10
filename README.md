@@ -18,8 +18,6 @@ python train_command.py tagger/config.jsonnet -s models/testcase -f --include-pa
 ```
 
 # TODO
- - annotate file with trained model
- - automatically run on testset
  - policy for when to run validation with expensive decoding
  - free up GPU memory when doing decoding and no further training
  

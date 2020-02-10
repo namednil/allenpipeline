@@ -68,7 +68,7 @@ import _jsonnet
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-parser = argparse.ArgumentParser(description='Run the training of an am-parser.')
+parser = argparse.ArgumentParser(description='Run training.')
 
 parser.add_argument('param_path',
                     type=str,

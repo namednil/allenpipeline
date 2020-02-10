@@ -408,10 +408,7 @@ class PipelineTrainer(TrainerBase):
         return metrics
 
 
-    def _validate(self, epoch : int) -> Dict[str, float]:
-        if not self.dataset_writer:
-            print("No dataset writer")
-            return dict()
+    def _validate(self, epoch : int) -> Tuple[float, int, Dict[str, float]]:
 
         if self._validation_iterator is not None:
             val_iterator = self._validation_iterator
@@ -421,72 +418,24 @@ class PipelineTrainer(TrainerBase):
         raw_val_generator = val_iterator(self._validation_data,
                                          num_epochs=1,
                                          shuffle=False)
-        val_generator = lazy_groups_of(raw_val_generator, len(self._cuda_devices))
-        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data)/len(self._cuda_devices))
+        val_generator = lazy_groups_of(raw_val_generator, 1)
 
         val_generator_tqdm = Tqdm.tqdm(val_generator,
-                                       total=num_validation_batches)
+                                       total=val_iterator.get_num_batches(self._validation_data))
 
         preds = []
-        filename = self._serialization_dir+f"/pred_epoch_{epoch}.txt"
 
-        with open(filename,"w") as f:
-            for batch_group in val_generator_tqdm:
-
-                if self._multiple_gpu:
-                    output_dict = training_util.data_parallel(batch_group, self.model, self._cuda_devices)
-                else:
-                    assert len(batch_group) == 1
-                    batch = batch_group[0]
-                    batch = nn_util.move_to_device(batch, self._cuda_devices[0])
-                    output_dict = self.model(**batch)
-
-                output_dict = self.model.decode(output_dict)
-
-                output_dict = split_up(output_dict, batch["order_metadata"])
-                preds.extend(output_dict)
-
-            if self.decoder:
-                preds = self.decoder.decode_batch(self.model.vocab, preds)
-
-            self.dataset_writer.write_to_file(self.model.vocab, OrderedDatasetReader.restore_order(preds), f)
-
-        if self.validation_command:
-            return self.validation_command.evaluate(filename)
-        return dict()
-
-
-    def _validation_loss(self) -> Tuple[float, int]:
-        """
-        Computes the validation loss. Returns it and the number of batches.
-        """
-        logger.info("Validating")
-
-        self.model.eval()
-
-        # Replace parameter values with the shadow values from the moving averages.
-        if self._moving_average is not None:
-            self._moving_average.assign_average_value()
-
-        if self._validation_iterator is not None:
-            val_iterator = self._validation_iterator
-        else:
-            val_iterator = self.iterator
-
-        num_gpus = len(self._cuda_devices)
-
-        raw_val_generator = val_iterator(self._validation_data,
-                                         num_epochs=1,
-                                         shuffle=False)
-        val_generator = lazy_groups_of(raw_val_generator, num_gpus)
-        num_validation_batches = math.ceil(val_iterator.get_num_batches(self._validation_data)/num_gpus)
-        val_generator_tqdm = Tqdm.tqdm(val_generator,
-                                       total=num_validation_batches)
         batches_this_epoch = 0
-        val_loss = 0
+        val_loss = 0.0
+
         for batch_group in val_generator_tqdm:
 
-            loss = self.batch_loss(batch_group, for_training=False)
+            assert len(batch_group) == 1
+            batch = batch_group[0]
+            batch = nn_util.move_to_device(batch, self._cuda_devices[0])
+            output_dict = self.model(**batch)
+
+            loss = output_dict.get("loss",None)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -501,11 +450,27 @@ class PipelineTrainer(TrainerBase):
             description = training_util.description_from_metrics(val_metrics)
             val_generator_tqdm.set_description(description, refresh=False)
 
+            if self.dataset_writer:
+                output_dict = self.model.decode(output_dict)
+                output_dict = split_up(output_dict, batch["order_metadata"])
+                preds.extend(output_dict)
+
         # Now restore the original parameter values.
         if self._moving_average is not None:
-            self._moving_average.restore()
+                self._moving_average.restore()
 
-        return val_loss, batches_this_epoch
+        metrics : Dict[str, float]= dict()
+        if self.dataset_writer:
+            if self.decoder:
+                preds = self.decoder.decode_batch(self.model.vocab, preds)
+            filename = self._serialization_dir+f"/pred_epoch_{epoch}.txt"
+            with open(filename,"w") as f:
+                self.dataset_writer.write_to_file(self.model.vocab, OrderedDatasetReader.restore_order(preds), f)
+
+            if self.validation_command:
+                metrics = self.validation_command.evaluate(filename)
+
+        return val_loss, batches_this_epoch, metrics
 
     def train(self, experiment : Optional[Experiment] = None) -> Dict[str, Any]:
         """
@@ -553,10 +518,9 @@ class PipelineTrainer(TrainerBase):
             if self._validation_data is not None:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
-                    val_loss, num_batches = self._validation_loss()
+                    val_loss, num_batches, other_metrics = self._validate(epoch)
                     val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
 
-                    other_metrics = self._validate(epoch) #write predictions to file and get scores from external tool
                     val_metrics.update(other_metrics)
 
                     # Check validation metric for early stopping
