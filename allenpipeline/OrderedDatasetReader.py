@@ -16,11 +16,8 @@ class OrderedDatasetReader(DatasetReader):
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         for i,instance in enumerate(self.read_file(file_path)):
-            instance.add_field("order_metadata",MetadataField({"position_in_corpus" : i, "is_annotated" : self.is_annotated(instance)}))
+            instance.add_field("order_metadata",MetadataField({"position_in_corpus" : i}))
             yield instance
-
-    def is_annotated(self, instance : Instance) -> bool:
-        raise NotImplementedError("is_annotated(instance : Instance) -> bool of your OrderedDatasetReader must be overriden.")
 
     @staticmethod
     def restore_order(instances : Iterable[Dict[str, Any]]) -> List[Dict[str,Any]]:
