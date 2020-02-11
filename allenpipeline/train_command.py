@@ -43,6 +43,8 @@ from typing import List, Tuple
 import random
 import socket
 
+import numpy as np
+
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',level=logging.INFO) #turn on logging.
 
 try:
@@ -239,7 +241,7 @@ def main(args : argparse.Namespace):
             test_metrics = test_command.evaluate(os.path.join(serialization_dir,"pred_test.txt"))
             if experiment:
                 with experiment.test():
-                    experiment.log_metrics(test_metrics)
+                    experiment.log_metrics({k : v for k,v in test_metrics.items() if np.isscalar(v)})
             metrics = merge_dicts(metrics, "test",test_metrics)
 
 

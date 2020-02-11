@@ -7,6 +7,7 @@ import datetime
 import traceback
 from typing import Dict, Optional, List, Tuple, Union, Iterable, Any
 
+import numpy as np
 import torch
 import torch.optim.lr_scheduler
 
@@ -550,7 +551,7 @@ class PipelineTrainer(TrainerBase):
 
             if experiment:
                 with experiment.validate():
-                    experiment.log_metrics(metrics, epoch=epoch)
+                    experiment.log_metrics({k : v for k,v in metrics.items() if np.isscalar(v)}, epoch=epoch)
 
             if self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
