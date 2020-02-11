@@ -209,8 +209,8 @@ def main(args : argparse.Namespace):
         code += _jsonnet.evaluate_file(args.param_path)
         code += "\n\n#=============IMPORTANT: overwritten options============\n\n"
         code += args.overrides
-        experiment.set_code(code)
-        code_data = json.loads(_jsonnet.evaluate_file(args.param_path))
+        experiment.set_code(code, overwrite=True)
+
 
         experiment.log_parameter("model_directory",serialization_dir)
         experiment.log_parameter("cuda_device",cuda_device)

@@ -506,7 +506,7 @@ class PipelineTrainer(TrainerBase):
 
             if experiment:
                 with experiment.train():
-                    experiment.log_metrics(train_metrics, epoch=epoch)
+                    experiment.log_metrics({k : v for k,v in train_metrics.items() if np.isscalar(v)}, epoch=epoch)
 
             # get peak of memory usage
             if 'cpu_memory_MB' in train_metrics:
