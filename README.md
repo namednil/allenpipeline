@@ -8,16 +8,25 @@ Makes it easier to build models with AllenNLP.
 - easy integration of external evaluation tools that receive a system prediction and a gold file
 - perform your expensive decoding/parsing on your CPU for all your instances in parallel
 
-# Usage example
-Simple POS tagging.
+## Installation
+Clone and install:
+```
+git clone https://github.com/namednil/allenpipeline
+cd allenpipeline/
+pip install .
+```
+Make sure you have `allennlp` installed. This was implemented with AllenNLP version `0.9` but other versions might work as well.
+
+## Usage example
+Have a look at the code in `tagger` for POS tagging. 
 
 ```
 bash download_example_data.sh
 mkdir -p models/
-python train_command.py tagger/config.jsonnet -s models/testcase -f --include-package tagger
+python -m allenpipeline train tagger/config.jsonnet -s models/testcase -f --include-package tagger
 ```
 
-# TODO
+## TODO
  - policy for when to run validation with expensive decoding
  - free up GPU memory when doing decoding and no further training
  

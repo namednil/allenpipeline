@@ -2,10 +2,10 @@ from dataclasses import dataclass
 
 from allennlp.common import Params
 
-from pipeline.Annotate import Annotator
-from pipeline.DatasetWriter import DatasetWriter
-from pipeline.Decoder import BatchDecoder
-from pipeline.evaluation_commands import BaseEvaluationCommand
+from allenpipeline.annotate import Annotator
+from allenpipeline.DatasetWriter import DatasetWriter
+from allenpipeline.Decoder import BatchDecoder
+from allenpipeline.evaluation_commands import BaseEvaluationCommand
 
 
 @dataclass

@@ -30,10 +30,10 @@ from allennlp.training import util as training_util
 from allennlp.training.moving_average import MovingAverage
 from comet_ml import Experiment
 
-from pipeline.DatasetWriter import  DatasetWriter
-from pipeline.Decoder import BatchDecoder, split_up
-from pipeline.OrderedDatasetReader import OrderedDatasetReader
-from pipeline.evaluation_commands import BaseEvaluationCommand
+from allenpipeline.DatasetWriter import  DatasetWriter
+from allenpipeline.Decoder import BatchDecoder, split_up
+from allenpipeline.OrderedDatasetReader import OrderedDatasetReader
+from allenpipeline.evaluation_commands import BaseEvaluationCommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 

@@ -63,47 +63,52 @@ from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor, JsonDict
 from allennlp.data import Instance
 
-from pipeline.PipelineTrainerPieces import PipelineTrainerPieces
+from allenpipeline.PipelineTrainerPieces import PipelineTrainerPieces
 
-parser = argparse.ArgumentParser(description='Run training.')
+def add_subparser(orig_parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
+    parser = orig_parser.add_parser("predict", help='Run inference.')
 
-parser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
-parser.add_argument('input_file', type=str, help='path to or url of the input file')
+    parser.add_argument('archive_file', type=str, help='the archived model to make predictions with')
+    parser.add_argument('input_file', type=str, help='path to or url of the input file')
 
-parser.add_argument('output_file', type=str, help='path to output file')
+    parser.add_argument('output_file', type=str, help='path to output file')
 
-parser.add_argument('--weights-file',
-                    type=str,
-                    help='a path that overrides which weights file to use')
+    parser.add_argument('--weights-file',
+                        type=str,
+                        help='a path that overrides which weights file to use')
 
-batch_size = parser.add_mutually_exclusive_group(required=False)
-batch_size.add_argument('--batch-size', type=int, default=32, help='The batch size to use for processing')
+    batch_size = parser.add_mutually_exclusive_group(required=False)
+    batch_size.add_argument('--batch-size', type=int, default=32, help='The batch size to use for processing')
 
-cuda_device = parser.add_mutually_exclusive_group(required=False)
-cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
+    cuda_device = parser.add_mutually_exclusive_group(required=False)
+    cuda_device.add_argument('--cuda-device', type=int, default=-1, help='id of GPU to use (if any)')
 
 
-parser.add_argument('-o', '--overrides',
-                    type=str,
-                    default="",
-                    help='a JSON structure used to override the experiment configuration')
+    parser.add_argument('-o', '--overrides',
+                        type=str,
+                        default="",
+                        help='a JSON structure used to override the experiment configuration')
 
-parser.add_argument('--include-package',
-                    nargs="+",
-                    default=[],
-                    help='Name of packages to include')
+    parser.add_argument('--include-package',
+                        nargs="+",
+                        default=[],
+                        help='Name of packages to include')
+    parser.set_defaults(func=main)
+    return parser
 
-args = parser.parse_args()
-for package_name in args.include_package:
-    import_submodules(package_name)
 
-archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
-config = archive.config
-prepare_environment(config)
-model = archive.model
-model.eval()
+def main(args : argparse.Namespace):
 
-pipelinepieces = PipelineTrainerPieces.from_params(config)
+    for package_name in args.include_package:
+        import_submodules(package_name)
 
-pipelinepieces.annotator.annotate_file(model, args.input_file, args.output_file)
+    archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
+    config = archive.config
+    prepare_environment(config)
+    model = archive.model
+    model.eval()
+
+    pipelinepieces = PipelineTrainerPieces.from_params(config)
+
+    pipelinepieces.annotator.annotate_file(model, args.input_file, args.output_file)
 

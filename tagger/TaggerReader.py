@@ -4,7 +4,7 @@ from allennlp.data import TokenIndexer, Instance, Token, Field, DatasetReader
 from allennlp.data.fields import TextField, SequenceLabelField, MetadataField
 from allennlp.data.token_indexers import SingleIdTokenIndexer
 
-from pipeline.OrderedDatasetReader import OrderedDatasetReader
+from allenpipeline.OrderedDatasetReader import OrderedDatasetReader
 
 
 @DatasetReader.register("tagging_reader")

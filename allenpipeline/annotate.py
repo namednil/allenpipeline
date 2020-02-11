@@ -1,13 +1,14 @@
 from typing import List, Dict, Any, Optional
 
+import torch
 from allennlp.common import Registrable
 from allennlp.data import DataIterator, Instance, DatasetReader
 from allennlp.models import Model
 import allennlp.nn.util as util
 
-from pipeline.DatasetWriter import DatasetWriter
-from pipeline.Decoder import BatchDecoder, split_up
-from pipeline.OrderedDatasetReader import OrderedDatasetReader
+from allenpipeline.DatasetWriter import DatasetWriter
+from allenpipeline.Decoder import BatchDecoder, split_up
+from allenpipeline.OrderedDatasetReader import OrderedDatasetReader
 
 
 class Annotator(Registrable):

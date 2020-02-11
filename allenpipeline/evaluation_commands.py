@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple
 
 from allennlp.common import Registrable
 
-from pipeline.utils import merge_dicts, flatten
+from allenpipeline.utils import merge_dicts, flatten
 
 
 class BaseEvaluationCommand(ABC, Registrable):

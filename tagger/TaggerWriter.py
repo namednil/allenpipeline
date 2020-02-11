@@ -2,7 +2,7 @@ from typing import Dict, Any, Iterable, TextIO
 
 from allennlp.data import Vocabulary
 
-from pipeline.DatasetWriter import DatasetWriter
+from allenpipeline.DatasetWriter import DatasetWriter
 
 
 @DatasetWriter.register("tagging_writer")
