@@ -2,11 +2,11 @@
 
 Makes it easier to build models with AllenNLP. 
 
-(Intended) Features:
-- simply define a `DatasetWriter` and you're good to go to save your model predictions
-- safe model predictions on the dev data
+Features:
+- simply define a `DatasetWriter` and you're good to go to save your model predictions (in the right order!)
+- safe your model's predictions on the dev data every epoch
 - easy integration of external evaluation tools that receive a system prediction and a gold file
-- perform your expensive decoding/parsing on your CPU for all your instances in parallel
+- have your scores for your expensive decoding/parsing problem pre-computed on the GPU and then perform the parsing in parallel on the CPU.
 
 ## Installation
 Clone and install:
