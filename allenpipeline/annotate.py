@@ -12,6 +12,9 @@ from allenpipeline.OrderedDatasetReader import OrderedDatasetReader
 
 
 class Annotator(Registrable):
+    """
+    Annotate instances with a model, restores original order.
+    """
 
     def __init__(self, data_iterator : DataIterator, dataset_reader : DatasetReader, dataset_writer : DatasetWriter, decoder : Optional[BatchDecoder] = None):
 

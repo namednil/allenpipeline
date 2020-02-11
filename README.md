@@ -3,6 +3,7 @@
 Makes it easier to build models with AllenNLP. 
 
 Features:
+- comet.ml integration
 - simply define a `DatasetWriter` and you're good to go to save your model predictions (in the right order!)
 - safe your model's predictions on the dev data every epoch
 - easy integration of external evaluation tools that receive a system prediction and a gold file

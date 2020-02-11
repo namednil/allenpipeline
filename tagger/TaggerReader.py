@@ -8,7 +8,7 @@ from allenpipeline.OrderedDatasetReader import OrderedDatasetReader
 
 
 @DatasetReader.register("tagging_reader")
-class TaggerReader(OrderedDatasetReader):
+class TaggerReader(OrderedDatasetReader): #NOTE that we inherit from OrderedDatasetReader which takes care of adding meta-data regarding ordering
 
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
@@ -17,6 +17,7 @@ class TaggerReader(OrderedDatasetReader):
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     def read_file(self, file_path: str) -> Iterable[Instance]:
+        #NOTE that this method would be usually called _read but inheriting from OrderedDatasetReader requires this modification.
         with open(file_path) as f:
             sent : List[Token] = []
             sent_tags : List[str] = []

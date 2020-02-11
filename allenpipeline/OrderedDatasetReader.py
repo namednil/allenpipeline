@@ -29,6 +29,12 @@ class OrderedDatasetReader(DatasetReader):
         return sorted(instances, key=lambda instance: instance["order_metadata"]["position_in_corpus"])
 
     def read_file(self, file_path) -> Iterable[Instance]:
+        """
+        Performs the task of _read in the usual DatasetReader.
+        Part of the OrderedDatasetReader, needed to add meta-data easily.
+        :param file_path:
+        :return:
+        """
         raise NotImplementedError()
 
 

@@ -7,6 +7,18 @@ from allennlp.data import Vocabulary
 
 logger = logging.getLogger(__name__)
 
+
+class BatchDecoder(Registrable):
+
+    def decode_batch(self, vocab: Vocabulary, instances : List[Dict[str,Any]]) -> List[Dict[str, Any]]:
+        """
+        Perform decoding/parsing (in parallel).
+        :param vocab:
+        :param instances:
+        :return:
+        """
+        raise NotImplementedError()
+
 def split_up(output_dict : Dict[str, torch.Tensor], order_metadata : List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Takes output from model.decode and the order metadata and creates a list with one element per instance.
@@ -45,8 +57,7 @@ def split_up(output_dict : Dict[str, torch.Tensor], order_metadata : List[Dict[s
 
     return instance_separated_output
 
-class BatchDecoder(Registrable):
 
-    def decode_batch(self, vocab: Vocabulary, instances : List[Dict[str,Any]]) -> List[Dict[str, Any]]:
-        raise NotImplementedError()
+
+
 

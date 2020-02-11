@@ -98,7 +98,9 @@ class SimpleTagger(Model):
     def forward(self,  # type: ignore
                 tokens: Dict[str, torch.LongTensor],
                 tags: torch.LongTensor = None,
-                metadata: List[Dict[str, Any]] = None, order_metadata : List[Dict[str, Any]] = None) -> Dict[str, torch.Tensor]:
+                metadata: List[Dict[str, Any]] = None,
+                order_metadata : List[Dict[str, Any]] = None #Add this line! NOTE that this is the only required change here.
+                ) -> Dict[str, torch.Tensor]:
         # pylint: disable=arguments-differ
         """
         Parameters
