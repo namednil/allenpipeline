@@ -11,9 +11,7 @@ Makes it easier to build models with AllenNLP.
 ## Installation
 Clone and install:
 ```
-git clone https://github.com/namednil/allenpipeline
-cd allenpipeline/
-pip install .
+pip install git+https://github.com/namednil/allenpipeline
 ```
 Make sure you have `allennlp` installed. This was implemented with AllenNLP version `0.9` but other versions might work as well.
 
