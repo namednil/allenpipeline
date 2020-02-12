@@ -159,7 +159,12 @@ def main(args : argparse.Namespace):
 
     test_file = params.params.get("test_data_path", None)
 
-    test_command = BaseEvaluationCommand.from_params(params.pop("test_command"))
+
+    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
+
+    test_command = None
+    if evaluate_on_test:
+        test_command = BaseEvaluationCommand.from_params(params.pop("test_command"))
 
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     check_for_gpu(cuda_device)
@@ -172,7 +177,7 @@ def main(args : argparse.Namespace):
 
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
-    evaluate_on_test = params.pop_bool("evaluate_on_test", False)
+
 
     #trainer_type = params.get("trainer", {}).get("type", "default")
 
