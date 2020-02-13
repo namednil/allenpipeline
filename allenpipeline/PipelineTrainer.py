@@ -424,6 +424,8 @@ class PipelineTrainer(TrainerBase):
         val_generator_tqdm = Tqdm.tqdm(val_generator,
                                        total=val_iterator.get_num_batches(self._validation_data))
 
+        self.model.eval()
+
         preds = []
 
         batches_this_epoch = 0
