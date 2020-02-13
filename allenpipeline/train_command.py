@@ -169,12 +169,6 @@ def main(args : argparse.Namespace):
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     check_for_gpu(cuda_device)
 
-    validation_dataset_reader_params = params.pop('validation_dataset_reader', None)
-    if validation_dataset_reader_params is not None:
-        dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
-    else:
-        dataset_reader = DatasetReader.from_params(params.pop('dataset_reader'))
-
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
 

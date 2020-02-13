@@ -28,6 +28,6 @@ python -m allenpipeline train tagger/config.jsonnet -s models/testcase -f --incl
 ## TODO
  - policy for when to run validation with expensive decoding
  - free up GPU memory when doing decoding and no further training
- 
+ - don't require comet.ml
  
   
