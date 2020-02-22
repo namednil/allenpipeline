@@ -54,6 +54,7 @@ class PipelineTrainer(TrainerBase):
                  validation_metric: str = "-loss",
                  validation_iterator: DataIterator = None,
                  shuffle: bool = True,
+                 epochs_before_validate : int = 0,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
                  num_serialized_models_to_keep: int = 20,
@@ -186,6 +187,7 @@ class PipelineTrainer(TrainerBase):
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
+        self.epochs_before_validate = epochs_before_validate
         self.validation_command = validation_command
         self.decoder = decoder
         self.dataset_writer = dataset_writer
@@ -518,7 +520,7 @@ class PipelineTrainer(TrainerBase):
                 if key.startswith('gpu_'):
                     metrics["peak_"+key] = max(metrics.get("peak_"+key, 0), value)
 
-            if self._validation_data is not None:
+            if self._validation_data is not None and epoch >= self.epochs_before_validate:
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches, other_metrics = self._validate(epoch)
@@ -764,6 +766,7 @@ class PipelineTrainer(TrainerBase):
         should_log_parameter_statistics = params.pop_bool("should_log_parameter_statistics", True)
         should_log_learning_rate = params.pop_bool("should_log_learning_rate", False)
         log_batch_size_period = params.pop_int("log_batch_size_period", None)
+        epochs_before_validate = params.pop_int("epochs_before_validate", 0)
 
         params.assert_empty(cls.__name__)
         return cls(model, optimizer, iterator,
@@ -782,6 +785,7 @@ class PipelineTrainer(TrainerBase):
                    grad_clipping=grad_clipping,
                    learning_rate_scheduler=lr_scheduler,
                    momentum_scheduler=momentum_scheduler,
+                   epochs_before_validate = epochs_before_validate,
                    checkpointer=checkpointer,
                    model_save_interval=model_save_interval,
                    summary_interval=summary_interval,
