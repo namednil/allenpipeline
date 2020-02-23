@@ -59,8 +59,7 @@ from allennlp.training.trainer_pieces import TrainerPieces
 from allenpipeline.PipelineTrainer import PipelineTrainer
 from allenpipeline.PipelineTrainerPieces import PipelineTrainerPieces
 from allenpipeline.evaluation_commands import BaseEvaluationCommand
-from allenpipeline.utils import merge_dicts
-
+from allenpipeline.utils import merge_dicts, get_hyperparams
 
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import Params
@@ -157,6 +156,8 @@ def main(args : argparse.Namespace):
     create_serialization_dir(params,serialization_dir , args.recover, args.force)
     stdout_handler = prepare_global_logging(serialization_dir, args.file_friendly_logging)
 
+    hyperparams = list(get_hyperparams(params.as_dict(infer_type_and_cast=True)))
+
     test_file = params.params.get("test_data_path", None)
 
 
@@ -205,10 +206,14 @@ def main(args : argparse.Namespace):
         with open(args.param_path) as fil:
             code = "".join(fil.readlines())
         code += "\n\n#=============Full details=============\n\n"
-        code += _jsonnet.evaluate_file(args.param_path)
+        full_details = _jsonnet.evaluate_file(args.param_path)
+        code += full_details
         code += "\n\n#=============IMPORTANT: overwritten options============\n\n"
         code += args.overrides
         experiment.set_code(code, overwrite=True)
+
+        for key,val in hyperparams:
+            experiment.log_parameter(key,val)
 
 
         experiment.log_parameter("model_directory",serialization_dir)

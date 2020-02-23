@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Iterable
 
 
 def flatten(d : Dict[Any, Any]):
@@ -25,3 +25,18 @@ def merge_dicts(x: Dict, prefix:str, y: Dict):
     for k,v in y.items():
         r[prefix+"_"+k] = v
     return r
+
+
+def get_hyperparams(d : Dict) -> Iterable[Tuple]:
+    agenda = [("",d)]
+    while agenda:
+        name, d = agenda.pop()
+        if name == "":
+            prefix = ""
+        else:
+            prefix = name + ":"
+        for key, val in d.items():
+            if isinstance(val,str) or isinstance(val, int) or isinstance(val, float):
+                yield prefix+key,val
+            elif isinstance(val, dict):
+                agenda.append((prefix+key,val))
