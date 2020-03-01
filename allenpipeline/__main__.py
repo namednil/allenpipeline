@@ -2,12 +2,15 @@ import argparse
 
 from . import train_command
 from . import predict_command
+from . import multi_train_command
 
 parser = argparse.ArgumentParser(description='Run allenpipeline')
 subparsers = parser.add_subparsers(title='Commands', metavar='')
 
 train_command.add_subparser(subparsers)
 predict_command.add_subparser(subparsers)
+multi_train_command.add_subparser(subparsers)
+
 
 args = parser.parse_args()
 

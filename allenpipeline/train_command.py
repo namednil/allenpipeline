@@ -133,6 +133,10 @@ def add_subparser(orig_parser: argparse._SubParsersAction) -> argparse.ArgumentP
                         default=False,
                         help='outputs tqdm status on separate lines and slows tqdm refresh rate')
 
+    parser.add_argument("--no-archive",
+                        action='store_true',
+                        default=False, help="don't tar up model.")
+
     parser.set_defaults(func=main)
     return parser
 
@@ -158,6 +162,8 @@ def main(args : argparse.Namespace):
 
     hyperparams = list(get_hyperparams(params.as_dict(infer_type_and_cast=True)))
 
+    params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+
     test_file = params.params.get("test_data_path", None)
 
 
@@ -170,7 +176,7 @@ def main(args : argparse.Namespace):
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     check_for_gpu(cuda_device)
 
-    params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+
 
 
 
@@ -253,5 +259,6 @@ def main(args : argparse.Namespace):
 
     cleanup_global_logging(stdout_handler)
 
-    # Now tar up results
-    archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+    if not args.no_archive:
+        # Now tar up results
+        archive_model(serialization_dir, files_to_archive=params.files_to_archive)
