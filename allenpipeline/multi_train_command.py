@@ -127,7 +127,8 @@ def main(args : argparse.Namespace):
 
     orig_number_of_epochs = params.as_flat_dict()["trainer.num_epochs"]
 
-    assert orig_number_of_epochs > epochs
+    if orig_number_of_epochs <= epochs:
+        raise ConfigurationError(f"The number of overall training epochs ({orig_number_of_epochs}) must be larger than those of the 'pre-training' round ({epochs}).")
 
     # Modify number of epochs
     overrides = json.loads(args.overrides) if args.overrides else dict()

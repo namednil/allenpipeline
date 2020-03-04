@@ -200,6 +200,10 @@ class PipelineTrainer(TrainerBase):
         self.train_data = train_dataset
         self._validation_data = validation_dataset
 
+        if num_epochs < epochs_before_validate:
+            raise ConfigurationError(f"The number of training epochs ({num_epochs})"
+                                     f" is smaller than the first epoch at which evaluation on the dev data will take place ({epochs_before_validate})")
+
         if patience is None:  # no early stopping
             if validation_dataset:
                 logger.warning('You provided a validation dataset but patience was set to None, '
