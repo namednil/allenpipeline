@@ -34,7 +34,7 @@ class PipelineTrainerPieces:
         if "validation_command" in params:
             test_command = BaseEvaluationCommand.from_params(params.pop("test_command"))
 
-        annotator = Annotator
+        annotator = None
         if "annotator" in params:
             annotator = Annotator.from_params(params.pop("annotator"))
 

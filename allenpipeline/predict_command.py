@@ -110,5 +110,7 @@ def main(args : argparse.Namespace):
 
     pipelinepieces = PipelineTrainerPieces.from_params(config)
 
+    if pipelinepieces.annotator is None:
+        raise ConfigurationError("Trained model doesn't have an 'annotator' defined in config file.")
     pipelinepieces.annotator.annotate_file(model, args.input_file, args.output_file)
 
