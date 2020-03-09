@@ -31,18 +31,19 @@ class Annotator(Registrable):
             self.dataset_writer.write_to_file(model.vocab, annotated, f)
 
     def annotate(self, model : Model, instances : List[Instance]) -> List[Dict[str, Any]]:
-        self.data_iterator.index_with(model.vocab)
-        cuda_device = model._get_prediction_device()
-        preds = []
-        for dataset in self.data_iterator._create_batches(instances,shuffle=False):
-            dataset.index_instances(model.vocab)
-            model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
-            output_dict = model.decode(model(**model_input))
+        with torch.no_grad():
+            self.data_iterator.index_with(model.vocab)
+            cuda_device = model._get_prediction_device()
+            preds = []
+            for dataset in self.data_iterator._create_batches(instances,shuffle=False):
+                dataset.index_instances(model.vocab)
+                model_input = util.move_to_device(dataset.as_tensor_dict(), cuda_device)
+                output_dict = model.decode(model(**model_input))
 
-            output_dict = split_up(output_dict, model_input["order_metadata"])
-            preds.extend(output_dict)
+                output_dict = split_up(output_dict, model_input["order_metadata"])
+                preds.extend(output_dict)
 
-        if self.decoder:
-            preds = self.decoder.decode_batch(model.vocab, preds)
+            if self.decoder:
+                preds = self.decoder.decode_batch(model.vocab, preds)
 
-        return OrderedDatasetReader.restore_order(preds)
+            return OrderedDatasetReader.restore_order(preds)
