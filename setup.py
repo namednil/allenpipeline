@@ -8,7 +8,6 @@ setup(name='allenpipeline',
       author='namednil',
       author_email='write-me-on-github@namednil.github',
       url="https://github.com/namednil/allenpipeline",
-      py_modules=['train_command', 'predict_command'],
       packages=['allenpipeline']
      )
      
