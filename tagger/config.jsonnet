@@ -1,5 +1,5 @@
 
-local num_epochs = 2;
+local num_epochs = 5;
 local device = 0;
 
 local word_dim = 100;
@@ -34,7 +34,7 @@ local data_writer = {
     "validation_command" : {
         "type" : "bash_evaluation_command",
         "command" : "python tagger/eval_script.py {gold_file} {system_output}",
-        "gold_file" : "data/dev.tt",
+        #"gold_file" : "data/dev.tt", # you can optionally set the gold_file if validation_data_path is not the file that you evaluate against.
         "result_regexes" : {
             "Acc" : [0, "Acc (?P<value>[0-9.]+)"]
         }
@@ -43,7 +43,7 @@ local data_writer = {
    "test_command" : {
         "type" : "bash_evaluation_command",
         "command" : "python tagger/eval_script.py {gold_file} {system_output}",
-        "gold_file" : "data/dev.tt",
+        "gold_file" : "data/dev.tt",  #you can optionally set the gold_file if test_data_path is not the file that you evaluate against.
         "result_regexes" : {
             "Acc" : [0, "Acc (?P<value>[0-9.]+)"]
         }

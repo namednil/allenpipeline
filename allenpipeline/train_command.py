@@ -165,7 +165,7 @@ def main(args : argparse.Namespace):
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
 
     test_file = params.params.get("test_data_path", None)
-
+    validation_data_path = params.get("validation_data_path", None)
 
     evaluate_on_test = params.pop_bool("evaluate_on_test", False)
 
@@ -178,13 +178,13 @@ def main(args : argparse.Namespace):
 
 
 
-
-
     #trainer_type = params.get("trainer", {}).get("type", "default")
 
     # Special logic to instantiate backward-compatible trainer.
     pieces = TrainerPieces.from_params(params, serialization_dir, args.recover)  # pylint: disable=no-member
     pipelinepieces = PipelineTrainerPieces.from_params(params)
+
+    pipelinepieces.validation_command.maybe_set_gold_file(validation_data_path)
 
 
 
@@ -248,6 +248,7 @@ def main(args : argparse.Namespace):
 
         if test_command:
             logger.info("Comparing against gold standard.")
+            test_command.maybe_set_gold_file(test_file)
             test_metrics = test_command.evaluate(os.path.join(serialization_dir,"pred_test.txt"))
             if experiment:
                 with experiment.test():

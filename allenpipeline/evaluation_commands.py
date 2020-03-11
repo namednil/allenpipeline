@@ -1,11 +1,13 @@
 import json
+import os
 import re
 import subprocess
 from abc import ABC, abstractmethod
 from tempfile import TemporaryDirectory
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 from allennlp.common import Registrable
+from allennlp.common.checks import ConfigurationError
 
 from allenpipeline.utils import merge_dicts, flatten
 
@@ -14,9 +16,23 @@ class BaseEvaluationCommand(ABC, Registrable):
     """
     An evaluation command takes two files (gold and system output) and returns a dictionary with scores.
     """
+    def __init__(self):
+        self.gold_file = None
+
     @abstractmethod
     def evaluate(self, system_output:str) -> Dict[str,float]:
         raise NotImplementedError()
+
+    def maybe_set_gold_file(self, gold_file : str) -> None:
+        """
+        Set gold file if it was None before, otherwise do nothing
+        :param gold_file:
+        :return:
+        """
+        if self.gold_file is None:
+            if not isinstance(gold_file, str):
+                raise ConfigurationError("Attempted to set gold file of evaluation command to something of type "+str(type(gold_file))+" but expected str")
+            self.gold_file = gold_file
 
 
 @BaseEvaluationCommand.register("bash_evaluation_command")
@@ -25,7 +41,7 @@ class BashEvaluationCommand(BaseEvaluationCommand):
     An evaluation command that can be configured with jsonnet files.
     Executes a bash command, taps into the output and returns metrics extracted using regular expressions.
     """
-    def __init__(self, gold_file: str, command : str, result_regexes: Dict[str, Tuple[int, str]], show_output: bool = True) -> None:
+    def __init__(self, command : str, result_regexes: Dict[str, Tuple[int, str]], show_output: bool = True, gold_file: Optional[str] = None) -> None:
         """
         Sets up an evaluator.
         :param command: a bash command that will get executed. Use {system_output} and {gold_file} as placeholders.
@@ -34,6 +50,10 @@ class BashEvaluationCommand(BaseEvaluationCommand):
             the respective values of the metrics in the specified lines. From each regex, we take the group "value". That is, use (?P<value>...) in your regex!
         :param if output of evaluation command should be printed.
         """
+        super().__init__()
+        if isinstance(gold_file, str) and not os.path.exists(gold_file):
+            raise ConfigurationError("Gold file "+gold_file+" doesn't seem to exist")
+
         self.gold_file = gold_file
         self.command = command
         self.result_regex = result_regexes
@@ -72,13 +92,17 @@ class JsonEvaluationCommand(BaseEvaluationCommand):
     An evaluation command that can be configured with jsonnet files.
     Executes a bash command, taps into the output and returns metrics extracted using json.
     """
-    def __init__(self,gold_file: str, commands : List[List[str]], show_output: bool = True) -> None:
+    def __init__(self, commands: List[List[str]], show_output: bool = True, gold_file: Optional[str] = None) -> None:
         """
         Sets up an evaluator.
         :param commands: a list of pairs of (metric_prefix, command) that will get executed. Use {system_output} and {gold_file} and {tmp} as placeholders.
         {tmp} points to a private temporary directory. if metric_prefix is the empty string, no metric will be saved.
         :param if output of evaluation command should be printed.
         """
+        super().__init__()
+        if isinstance(gold_file, str) and not os.path.exists(gold_file):
+            raise ConfigurationError("Gold file "+gold_file+" doesn't seem to exist")
+
         self.gold_file = gold_file
         self.commands = commands
         for cmd in self.commands:
