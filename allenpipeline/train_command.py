@@ -184,7 +184,8 @@ def main(args : argparse.Namespace):
     pieces = TrainerPieces.from_params(params, serialization_dir, args.recover)  # pylint: disable=no-member
     pipelinepieces = PipelineTrainerPieces.from_params(params)
 
-    pipelinepieces.validation_command.maybe_set_gold_file(validation_data_path)
+    if pipelinepieces.validation_command is not None:
+        pipelinepieces.validation_command.maybe_set_gold_file(validation_data_path)
 
 
 
