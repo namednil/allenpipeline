@@ -20,6 +20,7 @@ Make sure you have `allennlp` installed. This was implemented with AllenNLP vers
 Have a look at the code in `tagger` for POS tagging. 
 
 ```
+mkdir -p data/
 bash download_example_data.sh
 mkdir -p models/
 python -m allenpipeline train tagger/config.jsonnet -s models/testcase -f --include-package tagger
