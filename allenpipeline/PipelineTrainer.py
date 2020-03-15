@@ -514,7 +514,7 @@ class PipelineTrainer(TrainerBase):
 
             if experiment:
                 with experiment.train():
-                    experiment.log_metrics({k : v for k,v in train_metrics.items() if np.isscalar(v)}, epoch=epoch)
+                    experiment.log_metrics({k : v for k,v in train_metrics.items() if np.isscalar(v)}, step=epoch)
 
             # get peak of memory usage
             if 'cpu_memory_MB' in train_metrics:
@@ -559,7 +559,7 @@ class PipelineTrainer(TrainerBase):
 
             if experiment:
                 with experiment.validate():
-                    experiment.log_metrics({k : v for k,v in metrics.items() if np.isscalar(v)}, epoch=epoch)
+                    experiment.log_metrics({k : v for k,v in metrics.items() if np.isscalar(v)}, step=epoch)
 
             if self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
