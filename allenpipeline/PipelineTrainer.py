@@ -31,6 +31,8 @@ from allennlp.training import util as training_util
 from allennlp.training.moving_average import MovingAverage
 from comet_ml import Experiment
 
+from allenpipeline import Annotator
+from allenpipeline.callback import Callbacks, CallbackName
 from allenpipeline.DatasetWriter import  DatasetWriter
 from allenpipeline.Decoder import BatchDecoder, split_up
 from allenpipeline.OrderedDatasetReader import OrderedDatasetReader
@@ -47,6 +49,8 @@ class PipelineTrainer(TrainerBase):
                  iterator: DataIterator,
                  train_dataset: Iterable[Instance],
                  validation_dataset: Optional[Iterable[Instance]] = None,
+                 annotator : Optional[Annotator] = None,
+                 callbacks : Optional[Callbacks] = None,
                  decoder : Optional[BatchDecoder] = None,
                  dataset_writer : Optional[DatasetWriter] = None,
                  validation_command : Optional[BaseEvaluationCommand] = None,
@@ -187,6 +191,8 @@ class PipelineTrainer(TrainerBase):
 
         # I am not calling move_to_gpu here, because if the model is
         # not already on the GPU then the optimizer is going to be wrong.
+        self.callbacks = callbacks
+        self.annotator = annotator
         self.epochs_before_validate = epochs_before_validate
         self.validation_command = validation_command
         self.decoder = decoder
@@ -199,6 +205,8 @@ class PipelineTrainer(TrainerBase):
         self.optimizer = optimizer
         self.train_data = train_dataset
         self._validation_data = validation_dataset
+        self.epoch = 0
+        self.val_metrics: Dict[str, float] = {}
 
         if num_epochs < epochs_before_validate:
             raise ConfigurationError(f"The number of training epochs ({num_epochs})"
@@ -498,7 +506,7 @@ class PipelineTrainer(TrainerBase):
         logger.info("Beginning training.")
 
         train_metrics: Dict[str, float] = {}
-        val_metrics: Dict[str, float] = {}
+        self.val_metrics: Dict[str, float] = {}
         this_epoch_val_metric: Optional[float] = None
         metrics: Dict[str, Any] = {}
         epochs_trained = 0
@@ -509,6 +517,7 @@ class PipelineTrainer(TrainerBase):
             metrics["best_validation_" + key] = value
 
         for epoch in range(epoch_counter, self._num_epochs):
+            self.epoch = epoch
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
@@ -528,12 +537,15 @@ class PipelineTrainer(TrainerBase):
                 with torch.no_grad():
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches, other_metrics = self._validate(epoch)
-                    val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
+                    self.val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
 
-                    val_metrics.update(other_metrics)
+                    self.val_metrics.update(other_metrics)
+
+                    if self.callbacks:
+                        self.callbacks.call_if_registered(CallbackName.AFTER_VALIDATION, annotator=self.annotator, model=self.model, trainer=self, experiment=experiment)
 
                     # Check validation metric for early stopping
-                    this_epoch_val_metric = val_metrics[self._validation_metric]
+                    this_epoch_val_metric = self.val_metrics[self._validation_metric]
                     self._metric_tracker.add_metric(this_epoch_val_metric)
 
                     if self._metric_tracker.should_stop_early():
@@ -541,7 +553,7 @@ class PipelineTrainer(TrainerBase):
                         break
 
             self._tensorboard.log_metrics(train_metrics,
-                                          val_metrics=val_metrics,
+                                          val_metrics=self.val_metrics,
                                           log_to_console=True,
                                           epoch=epoch + 1)  # +1 because tensorboard doesn't like 0
 
@@ -554,7 +566,7 @@ class PipelineTrainer(TrainerBase):
 
             for key, value in train_metrics.items():
                 metrics["training_" + key] = value
-            for key, value in val_metrics.items():
+            for key, value in self.val_metrics.items():
                 metrics["validation_" + key] = value
 
             if experiment:
@@ -565,10 +577,10 @@ class PipelineTrainer(TrainerBase):
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
                 metrics['best_epoch'] = epoch
-                for key, value in val_metrics.items():
+                for key, value in self.val_metrics.items():
                     metrics["best_validation_" + key] = value
 
-                self._metric_tracker.best_epoch_metrics = val_metrics
+                self._metric_tracker.best_epoch_metrics = self.val_metrics
 
             if self._serialization_dir:
                 dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
@@ -712,6 +724,8 @@ class PipelineTrainer(TrainerBase):
                     decoder : BatchDecoder,
                     dataset_writer : DatasetWriter,
                     validation_command : BaseEvaluationCommand,
+                    annotator : Optional[Annotator] = None,
+                    callbacks : Optional[Callbacks] = None,
                     validation_iterator: DataIterator = None) -> 'PipelineTrainer':
         # pylint: disable=arguments-differ
         patience = params.pop_int("patience", None)
@@ -777,6 +791,8 @@ class PipelineTrainer(TrainerBase):
         return cls(model, optimizer, iterator,
                    train_data, validation_data,
                    decoder = decoder,
+                   annotator = annotator,
+                   callbacks = callbacks,
                    dataset_writer = dataset_writer,
                    validation_command = validation_command,
                    patience=patience,

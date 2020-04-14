@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from typing import Dict
 
 from allennlp.common import Params
 
+from allenpipeline.callback import Callback, Callbacks
 from allenpipeline.annotate import Annotator
 from allenpipeline.DatasetWriter import DatasetWriter
 from allenpipeline.Decoder import BatchDecoder
@@ -15,6 +17,7 @@ class PipelineTrainerPieces:
     validation_command : BaseEvaluationCommand
     test_command : BaseEvaluationCommand
     annotator : Annotator
+    callbacks : Callbacks
 
     @staticmethod
     def from_params(params : Params):
@@ -38,4 +41,8 @@ class PipelineTrainerPieces:
         if "annotator" in params:
             annotator = Annotator.from_params(params.pop("annotator"))
 
-        return PipelineTrainerPieces(dataset_writer, decoder, validation_command, test_command, annotator)
+        callbacks = None
+        if "callbacks" in params:
+            callbacks = Callbacks.from_params(params.pop("callbacks"))
+
+        return PipelineTrainerPieces(dataset_writer, decoder, validation_command, test_command, annotator, callbacks)

@@ -199,6 +199,8 @@ def main(args : argparse.Namespace):
         decoder=pipelinepieces.decoder,
         dataset_writer=pipelinepieces.dataset_writer,
         validation_command=pipelinepieces.validation_command,
+        annotator=pipelinepieces.annotator,
+        callbacks=pipelinepieces.callbacks,
         validation_iterator=pieces.validation_iterator)
     evaluation_iterator = pieces.validation_iterator or pieces.iterator
     evaluation_dataset = pieces.test_dataset
