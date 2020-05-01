@@ -27,6 +27,7 @@ class Callback(Registrable):
 
 class CallbackName(Enum):
     AFTER_VALIDATION = "after_validation"
+    BEFORE_VALIDATION = "before_validation"
 
 class Callbacks(Registrable):
     POSSIBLE_CALLBACKS_NAMES = [name.value for name in CallbackName]

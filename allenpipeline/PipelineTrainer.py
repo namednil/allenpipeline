@@ -535,6 +535,9 @@ class PipelineTrainer(TrainerBase):
 
             if self._validation_data is not None and epoch >= self.epochs_before_validate:
                 with torch.no_grad():
+                    if self.callbacks:
+                        self.callbacks.call_if_registered(CallbackName.BEFORE_VALIDATION, annotator=self.annotator, model=self.model, trainer=self, experiment=experiment)
+
                     # We have a validation set, so compute all the metrics on it.
                     val_loss, num_batches, other_metrics = self._validate(epoch)
                     self.val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)

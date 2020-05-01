@@ -1,11 +1,11 @@
 
 import comet_ml
 
-from .annotate import Annotator
-from .DatasetWriter import  DatasetWriter
-from .Decoder import BatchDecoder
-from .evaluation_commands import BaseEvaluationCommand, BashEvaluationCommand, JsonEvaluationCommand
-from .OrderedDatasetReader import OrderedDatasetReader
-from .PipelineTrainerPieces import PipelineTrainerPieces
-from .PipelineTrainer import PipelineTrainer
+from allenpipeline.annotate import Annotator
+from allenpipeline.DatasetWriter import  DatasetWriter
+from allenpipeline.Decoder import BatchDecoder
+from allenpipeline.evaluation_commands import BaseEvaluationCommand, BashEvaluationCommand, JsonEvaluationCommand
+from allenpipeline.OrderedDatasetReader import OrderedDatasetReader
+from allenpipeline.PipelineTrainerPieces import PipelineTrainerPieces
+from allenpipeline.PipelineTrainer import PipelineTrainer
 

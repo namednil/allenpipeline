@@ -49,6 +49,7 @@ or dataset to JSON predictions using a trained model and its
       --include-package INCLUDE_PACKAGE
                             additional packages to include
 """
+import time
 from typing import List, Iterator, Optional
 import argparse
 import sys
@@ -112,5 +113,8 @@ def main(args : argparse.Namespace):
 
     if pipelinepieces.annotator is None:
         raise ConfigurationError("Trained model doesn't have an 'annotator' defined in config file.")
+    t1 = time.time()
     pipelinepieces.annotator.annotate_file(model, args.input_file, args.output_file)
+    t2 = time.time()
+    print("Predicting took", round(t2-t1,3),"seconds.")
 
