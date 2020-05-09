@@ -508,13 +508,13 @@ class PipelineTrainer(TrainerBase):
         train_metrics: Dict[str, float] = {}
         self.val_metrics: Dict[str, float] = {}
         this_epoch_val_metric: Optional[float] = None
-        metrics: Dict[str, Any] = {}
+        self.metrics: Dict[str, Any] = {}
         epochs_trained = 0
         training_start_time = time.time()
 
-        metrics['best_epoch'] = self._metric_tracker.best_epoch
+        self.metrics['best_epoch'] = self._metric_tracker.best_epoch
         for key, value in self._metric_tracker.best_epoch_metrics.items():
-            metrics["best_validation_" + key] = value
+            self.metrics["best_validation_" + key] = value
 
         for epoch in range(epoch_counter, self._num_epochs):
             self.epoch = epoch
@@ -527,11 +527,11 @@ class PipelineTrainer(TrainerBase):
 
             # get peak of memory usage
             if 'cpu_memory_MB' in train_metrics:
-                metrics['peak_cpu_memory_MB'] = max(metrics.get('peak_cpu_memory_MB', 0),
+                self.metrics['peak_cpu_memory_MB'] = max(self.metrics.get('peak_cpu_memory_MB', 0),
                                                     train_metrics['cpu_memory_MB'])
             for key, value in train_metrics.items():
                 if key.startswith('gpu_'):
-                    metrics["peak_"+key] = max(metrics.get("peak_"+key, 0), value)
+                    self.metrics["peak_"+key] = max(self.metrics.get("peak_"+key, 0), value)
 
             if self._validation_data is not None and epoch >= self.epochs_before_validate:
                 with torch.no_grad():
@@ -562,31 +562,31 @@ class PipelineTrainer(TrainerBase):
 
             # Create overall metrics dict
             training_elapsed_time = time.time() - training_start_time
-            metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
-            metrics["training_start_epoch"] = epoch_counter
-            metrics["training_epochs"] = epochs_trained
-            metrics["epoch"] = epoch
+            self.metrics["training_duration"] = str(datetime.timedelta(seconds=training_elapsed_time))
+            self.metrics["training_start_epoch"] = epoch_counter
+            self.metrics["training_epochs"] = epochs_trained
+            self.metrics["epoch"] = epoch
 
             for key, value in train_metrics.items():
-                metrics["training_" + key] = value
+                self.metrics["training_" + key] = value
             for key, value in self.val_metrics.items():
-                metrics["validation_" + key] = value
+                self.metrics["validation_" + key] = value
 
             if experiment:
                 with experiment.validate():
-                    experiment.log_metrics({k : v for k,v in metrics.items() if np.isscalar(v)}, step=epoch)
+                    experiment.log_metrics({k : v for k,v in self.metrics.items() if np.isscalar(v)}, step=epoch)
 
             if self._metric_tracker.is_best_so_far():
                 # Update all the best_ metrics.
                 # (Otherwise they just stay the same as they were.)
-                metrics['best_epoch'] = epoch
+                self.metrics['best_epoch'] = epoch
                 for key, value in self.val_metrics.items():
-                    metrics["best_validation_" + key] = value
+                    self.metrics["best_validation_" + key] = value
 
                 self._metric_tracker.best_epoch_metrics = self.val_metrics
 
             if self._serialization_dir:
-                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), metrics)
+                dump_metrics(os.path.join(self._serialization_dir, f'metrics_epoch_{epoch}.json'), self.metrics)
 
             # The Scheduler API is agnostic to whether your schedule requires a validation metric -
             # if it doesn't, the validation metric passed here is ignored.
@@ -618,7 +618,10 @@ class PipelineTrainer(TrainerBase):
         if best_model_state:
             self.model.load_state_dict(best_model_state)
 
-        return metrics
+        if self.callbacks:
+            self.callbacks.call_if_registered(CallbackName.AFTER_TRAINING, annotator=self.annotator, model=self.model, trainer=self, experiment=experiment)
+
+        return self.metrics
 
     def _save_checkpoint(self, epoch: Union[int, str]) -> None:
         """
