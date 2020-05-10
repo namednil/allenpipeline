@@ -535,25 +535,31 @@ class PipelineTrainer(TrainerBase):
 
             if self._validation_data is not None and epoch >= self.epochs_before_validate:
                 with torch.no_grad():
-                    if self.callbacks:
-                        self.callbacks.call_if_registered(CallbackName.BEFORE_VALIDATION, annotator=self.annotator, model=self.model, trainer=self, experiment=experiment)
+                    try:
+                        if self.callbacks:
+                            self.callbacks.call_if_registered(CallbackName.BEFORE_VALIDATION, annotator=self.annotator, model=self.model, trainer=self, experiment=experiment)
 
-                    # We have a validation set, so compute all the metrics on it.
-                    val_loss, num_batches, other_metrics = self._validate(epoch)
-                    self.val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
+                        # We have a validation set, so compute all the metrics on it.
+                        val_loss, num_batches, other_metrics = self._validate(epoch)
+                        self.val_metrics = training_util.get_metrics(self.model, val_loss, num_batches, reset=True)
 
-                    self.val_metrics.update(other_metrics)
+                        self.val_metrics.update(other_metrics)
 
-                    if self.callbacks:
-                        self.callbacks.call_if_registered(CallbackName.AFTER_VALIDATION, annotator=self.annotator, model=self.model, trainer=self, experiment=experiment)
+                        if self.callbacks:
+                            self.callbacks.call_if_registered(CallbackName.AFTER_VALIDATION, annotator=self.annotator, model=self.model, trainer=self, experiment=experiment)
 
-                    # Check validation metric for early stopping
-                    this_epoch_val_metric = self.val_metrics[self._validation_metric]
-                    self._metric_tracker.add_metric(this_epoch_val_metric)
+                        # Check validation metric for early stopping
+                        this_epoch_val_metric = self.val_metrics[self._validation_metric]
+                        self._metric_tracker.add_metric(this_epoch_val_metric)
 
-                    if self._metric_tracker.should_stop_early():
-                        logger.info("Ran out of patience.  Stopping training.")
-                        break
+                        if self._metric_tracker.should_stop_early():
+                            logger.info("Ran out of patience.  Stopping training.")
+                            break
+                    except Exception as ex:
+                        print("An exception occured:")
+                        print(ex)
+                        self._save_checkpoint("validation-failed")
+                        raise
 
             self._tensorboard.log_metrics(train_metrics,
                                           val_metrics=self.val_metrics,
