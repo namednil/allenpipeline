@@ -12,8 +12,8 @@ class TaggerReader(OrderedDatasetReader): #NOTE that we inherit from OrderedData
 
     def __init__(self,
                  token_indexers: Dict[str, TokenIndexer] = None,
-                 lazy: bool = False) -> None:
-        super().__init__(lazy)
+                 **kwargs) -> None:
+        super().__init__(**kwargs)
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
 
     def read_file(self, file_path: str) -> Iterable[Instance]:

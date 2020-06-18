@@ -11,14 +11,15 @@ local dataset_reader = {
                 "tokens" : {
                      "type": "single_id"
                      }
-
                 }
            };
 
 local data_iterator = {
-        "type": "bucket",
-        "batch_size": 16,
-       "sorting_keys" : [["tokens","num_tokens"]]
+        "batch_sampler" : {
+            "type": "bucket",
+            "batch_size": 16,
+            "sorting_keys" : ["tokens"]
+        }
     };
 
 local data_writer = {
@@ -49,13 +50,7 @@ local data_writer = {
         }
     },
 
-   "annotator" : {
-        "data_iterator" : data_iterator,
-        "dataset_reader" : dataset_reader,
-        "dataset_writer" : data_writer
-   },
-
-    "iterator": data_iterator,
+    "data_loader": data_iterator,
     "model": {
         "type": "simple_tagger2",
         "encoder" : {
@@ -66,10 +61,12 @@ local data_writer = {
         },
 
         "text_field_embedder": {
-               "tokens": {
-                    "type": "embedding",
-                    "embedding_dim": word_dim
-                },
+               "token_embedders": {
+                     "tokens" : {
+                        "type": "embedding",
+                        "embedding_dim": word_dim
+                    }
+               }
         },
 
     },
@@ -80,12 +77,35 @@ local data_writer = {
     "evaluate_on_test" : true,
 
     "trainer": {
+        "type" : "pipeline",
         "num_epochs": num_epochs,
         "cuda_device": device,
         "optimizer": {
             "type": "adam",
         },
-        "num_serialized_models_to_keep" : 1,
-    }
+        "checkpointer" : {
+            "num_serialized_models_to_keep" : 1,
+        },
+        "epochs_before_validate" : 1, #if validation is expensive, we can call it slightly later, after first epochs, the model is probably rubbish anyway.
+
+        "external_callbacks" : { # Here we register non-AllenNLP callbacks, that also have access to the annotator.
+            "type" : "default", #for some reason, this is necessary.
+            "callbacks" : {
+                "after_training" : {
+                    "type" : "demo-callback"
+                }
+            }
+        }
+    },
+
+    # Here we bundle everything that we need to have to make predictions with a trained model:
+    "annotator" : {
+        "type" : "default",
+        "data_loader" : data_iterator,
+        "dataset_reader" : dataset_reader,
+        "dataset_writer" : data_writer,
+    },
+
+
 }
 

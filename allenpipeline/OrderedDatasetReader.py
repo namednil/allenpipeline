@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, Any, List
+from typing import Iterable, Dict, Any, List, Optional
 
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import MetadataField
@@ -6,17 +6,19 @@ from allennlp.data.fields import MetadataField
 
 class OrderedDatasetReader(DatasetReader):
     """
-    DatasetReader that tracks for each instance
-    - if it is annotated completely, that is, if it can serve as (supervised) training data
-    - where it came from in the corpus
+    DatasetReader that tracks for each instance where it came from in the corpus.
     """
 
-    def __init__(self, lazy:bool = False) -> None:
-        super().__init__(lazy=lazy)
+    def __init__(self,  lazy: bool = False,
+                 cache_directory: Optional[str] = None,
+                 max_instances: Optional[int] = None,
+                 manual_distributed_sharding: bool = False,
+                 manual_multi_process_sharding: bool = False,) -> None:
+        super().__init__(lazy, cache_directory, max_instances, manual_distributed_sharding, manual_multi_process_sharding)
 
     def _read(self, file_path: str) -> Iterable[Instance]:
         for i,instance in enumerate(self.read_file(file_path)):
-            instance.add_field("order_metadata",MetadataField({"position_in_corpus" : i}))
+            instance.add_field("order_metadata",MetadataField({"position_in_corpus": i}))
             yield instance
 
     @staticmethod

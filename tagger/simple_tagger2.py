@@ -1,13 +1,14 @@
 from typing import Dict, Optional, List, Any
 
 import numpy
+from allennlp.common import Lazy
 from overrides import overrides
 import torch
 from torch.nn.modules.linear import Linear
 import torch.nn.functional as F
 
 from allennlp.common.checks import check_dimensions_match, ConfigurationError
-from allennlp.data import Vocabulary
+from allennlp.data import Vocabulary, BatchSampler, DataLoader, DatasetReader
 from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.models.model import Model
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
@@ -61,7 +62,8 @@ class SimpleTagger(Model):
                  verbose_metrics: bool = False,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super(SimpleTagger, self).__init__(vocab, regularizer)
+
+        super(SimpleTagger, self).__init__(vocab, regularizer=regularizer)
 
         self.label_namespace = label_namespace
         self.text_field_embedder = text_field_embedder
@@ -160,7 +162,7 @@ class SimpleTagger(Model):
         return output_dict
 
     @overrides
-    def decode(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+    def make_output_human_readable(self, output_dict: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """
         Does a simple position-wise argmax over each token, converts indices to string labels, and
         adds a ``"tags"`` key to the dictionary with the result.

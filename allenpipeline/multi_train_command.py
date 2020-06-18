@@ -20,22 +20,10 @@ try:
 except:
     logging.info("comet_ml package not installed")
 
-from allennlp.data import DatasetReader
-from allennlp.training.trainer_pieces import TrainerPieces
-
-
-from allenpipeline.PipelineTrainer import PipelineTrainer
-from allenpipeline.PipelineTrainerPieces import PipelineTrainerPieces
-from allenpipeline.evaluation_commands import BaseEvaluationCommand
-from allenpipeline.utils import merge_dicts, get_hyperparams
-
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging, cleanup_global_logging, dump_metrics, \
-    import_submodules
-from allennlp.models.archival import archive_model, CONFIG_NAME
-from allennlp.models.model import Model, _DEFAULT_WEIGHTS
-from allennlp.training.util import create_serialization_dir, evaluate
+
+
 
 import json
 import _jsonnet

@@ -44,6 +44,11 @@ import random
 import socket
 
 import numpy as np
+from allennlp.commands.train import TrainModel
+from allennlp.common.logging import prepare_global_logging
+from allennlp.training import GradientDescentTrainer
+
+from allenpipeline.train_model import TrainPipelineModel
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',level=logging.INFO) #turn on logging.
 
@@ -53,18 +58,17 @@ except:
     logging.info("comet_ml package not installed")
 
 from allennlp.data import DatasetReader
-from allennlp.training.trainer_pieces import TrainerPieces
 
 
 from allenpipeline.PipelineTrainer import PipelineTrainer
-from allenpipeline.PipelineTrainerPieces import PipelineTrainerPieces
+#from allenpipeline.PipelineTrainerPieces import PipelineTrainerPieces
 from allenpipeline.evaluation_commands import BaseEvaluationCommand
 from allenpipeline.utils import merge_dicts, get_hyperparams
 
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common import Params
-from allennlp.common.util import prepare_environment, prepare_global_logging, cleanup_global_logging, dump_metrics, \
-    import_submodules
+from allennlp.common.util import prepare_environment, dump_metrics, \
+    import_module_and_submodules
 from allennlp.models.archival import archive_model, CONFIG_NAME
 from allennlp.models.model import Model, _DEFAULT_WEIGHTS
 from allennlp.training.util import create_serialization_dir, evaluate
@@ -144,7 +148,7 @@ def add_subparser(orig_parser: argparse._SubParsersAction) -> argparse.ArgumentP
 def main(args : argparse.Namespace):
 
     for package_name in args.include_package:
-        import_submodules(package_name)
+        import_module_and_submodules(package_name)
 
     params = Params.from_file(args.param_path,args.overrides)
 
@@ -158,7 +162,7 @@ def main(args : argparse.Namespace):
     prepare_environment(params)
     serialization_dir = args.serialization_dir
     create_serialization_dir(params,serialization_dir , args.recover, args.force)
-    stdout_handler = prepare_global_logging(serialization_dir, args.file_friendly_logging)
+    prepare_global_logging(serialization_dir, args.file_friendly_logging)
 
     hyperparams = list(get_hyperparams(params.as_dict(infer_type_and_cast=True)))
 
@@ -176,34 +180,12 @@ def main(args : argparse.Namespace):
     cuda_device = params.params.get('trainer').get('cuda_device', -1)
     check_for_gpu(cuda_device)
 
+    train_model = TrainPipelineModel.from_params(params=params, serialization_dir=serialization_dir, local_rank=0)
 
+    trainer = train_model.trainer
 
-    #trainer_type = params.get("trainer", {}).get("type", "default")
-
-    # Special logic to instantiate backward-compatible trainer.
-    pieces = TrainerPieces.from_params(params, serialization_dir, args.recover)  # pylint: disable=no-member
-    pipelinepieces = PipelineTrainerPieces.from_params(params)
-
-    if pipelinepieces.validation_command is not None:
-        pipelinepieces.validation_command.maybe_set_gold_file(validation_data_path)
-
-
-
-    trainer = PipelineTrainer.from_params(
-        model=pieces.model,
-        serialization_dir=serialization_dir,
-        iterator=pieces.iterator,
-        train_data=pieces.train_dataset,
-        validation_data=pieces.validation_dataset,
-        params=pieces.params,
-        decoder=pipelinepieces.decoder,
-        dataset_writer=pipelinepieces.dataset_writer,
-        validation_command=pipelinepieces.validation_command,
-        annotator=pipelinepieces.annotator,
-        callbacks=pipelinepieces.callbacks,
-        validation_iterator=pieces.validation_iterator)
-    evaluation_iterator = pieces.validation_iterator or pieces.iterator
-    evaluation_dataset = pieces.test_dataset
+    if trainer.validation_command is not None:
+       trainer.validation_command.maybe_set_gold_file(validation_data_path)
 
 
     params.assert_empty('base train command')
@@ -241,13 +223,13 @@ def main(args : argparse.Namespace):
         if os.path.exists(os.path.join(serialization_dir, _DEFAULT_WEIGHTS)):
             logging.info("Training interrupted by the user. Attempting to create "
                          "a model archive using the current best epoch weights.")
-            archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+            archive_model(serialization_dir)
         raise
 
     # Evaluate
     if test_file and evaluate_on_test:
         logger.info("The model will be evaluated using the best epoch weights (see pred_test.txt).")
-        pipelinepieces.annotator.annotate_file(trainer.model, test_file, os.path.join(serialization_dir,"pred_test.txt"))
+        trainer.annotator.annotate_file(trainer.model, test_file, os.path.join(serialization_dir,"pred_test.txt"))
 
         if test_command:
             logger.info("Comparing against gold standard.")
@@ -261,8 +243,7 @@ def main(args : argparse.Namespace):
 
     dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
 
-    cleanup_global_logging(stdout_handler)
 
     if not args.no_archive:
         # Now tar up results
-        archive_model(serialization_dir, files_to_archive=params.files_to_archive)
+        archive_model(serialization_dir)

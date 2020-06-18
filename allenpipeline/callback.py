@@ -45,3 +45,6 @@ class Callbacks(Registrable):
 
         if name not in Callbacks.POSSIBLE_CALLBACKS:
             raise ValueError("Problem in allenpipeline: trainer tried to call the callback "+name.value+" but this is not in the list of possible callbacks")
+
+
+Callbacks.register("default")(Callbacks)

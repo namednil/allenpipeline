@@ -59,12 +59,13 @@ from allennlp.commands.subcommand import Subcommand
 from allennlp.common import Params
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.file_utils import cached_path
-from allennlp.common.util import lazy_groups_of, import_submodules, prepare_environment
+from allennlp.common.util import lazy_groups_of, import_module_and_submodules, prepare_environment
 from allennlp.models.archival import load_archive
 from allennlp.predictors.predictor import Predictor, JsonDict
 from allennlp.data import Instance
 
-from allenpipeline.PipelineTrainerPieces import PipelineTrainerPieces
+from allenpipeline import Annotator
+
 
 def add_subparser(orig_parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
     parser = orig_parser.add_parser("predict", help='Run inference.')
@@ -101,7 +102,7 @@ def add_subparser(orig_parser: argparse._SubParsersAction) -> argparse.ArgumentP
 def main(args : argparse.Namespace):
 
     for package_name in args.include_package:
-        import_submodules(package_name)
+        import_module_and_submodules(package_name)
 
     archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
     config = archive.config
@@ -109,12 +110,15 @@ def main(args : argparse.Namespace):
     model = archive.model
     model.eval()
 
-    pipelinepieces = PipelineTrainerPieces.from_params(config)
+    if "annotator" not in config:
+        raise ConfigurationError("Key 'annotator' is missing, sorry, cannot perform annotation")
 
-    if pipelinepieces.annotator is None:
+    annotator = Annotator.from_params(config["annotator"])
+
+    if annotator is None:
         raise ConfigurationError("Trained model doesn't have an 'annotator' defined in config file.")
     t1 = time.time()
-    pipelinepieces.annotator.annotate_file(model, args.input_file, args.output_file)
+    annotator.annotate_file(model, args.input_file, args.output_file)
     t2 = time.time()
     print("Predicting took", round(t2-t1,3),"seconds.")
 
