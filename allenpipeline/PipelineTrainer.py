@@ -403,6 +403,7 @@ class PipelineTrainer(GradientDescentTrainer):
             callback(self, metrics={}, epoch=-1, is_master=self._master)
 
         for epoch in range(epoch_counter, self._num_epochs):
+            self.epoch = epoch
             epoch_start_time = time.time()
             train_metrics = self._train_epoch(epoch)
 
