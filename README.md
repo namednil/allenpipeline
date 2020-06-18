@@ -1,6 +1,6 @@
 # allenpipeline
 
-Makes it easier to build models with AllenNLP. 
+Makes it easier to build a pipeline with AllenNLP that annotates files.
 
 Features:
 - comet.ml integration
@@ -14,7 +14,7 @@ Clone and install:
 ```
 pip install git+https://github.com/namednil/allenpipeline
 ```
-Make sure you have `allennlp` installed. This was implemented with AllenNLP version `0.9` but other versions might work as well.
+Make sure you have `allennlp` installed. This was implemented for AllenNLP version `1.0`, checkout the `0.9` branch for a version that was developed for AllenNLP `0.9` but that might also worker for older ones.
 
 ## Usage example
 Have a look at the code in `tagger` for POS tagging. 
@@ -26,9 +26,8 @@ mkdir -p models/
 python -m allenpipeline train tagger/config.jsonnet -s models/testcase -f --include-package tagger
 ```
 
-## TODO
- - policy for when to run validation with expensive decoding
- - free up GPU memory when doing decoding and no further training
- - don't require comet.ml
- 
+## Known issues
+ - doesn't free up GPU memory when doing decoding and no further training
+ - comet.ml packages is required, should be optional
+ - distributed training not supported.
   
