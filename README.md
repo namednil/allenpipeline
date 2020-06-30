@@ -14,7 +14,10 @@ Clone and install:
 ```
 pip install git+https://github.com/namednil/allenpipeline
 ```
-Make sure you have `allennlp` installed. This was implemented for AllenNLP version `1.0`, checkout the `0.9` branch for a version that was developed for AllenNLP `0.9` but that might also worker for older ones.
+Make sure you have `allennlp` installed. This was implemented for AllenNLP version `1.0`. Checkout the `0.9` branch for a version that was developed for AllenNLP `0.9` but that might also worker for older ones:
+```
+pip install git+https://github.com/namednil/allenpipeline/@0.9
+```
 
 ## Usage example
 Have a look at the code in `tagger` for POS tagging. 
